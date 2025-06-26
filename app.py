@@ -66,11 +66,9 @@ if stock_name:
             st.success("Stock appears fundamentally strong. Proceeding with technical analysis.")
 
             # Price Action
-            if 'Close' not in data.columns or data['Close'].dropna().empty:
-                raise ValueError("No valid closing prices found in the data.")
-            last_close = data['Close'].dropna().iloc[-1]
-            high = data['High'].max()
-            low = data['Low'].min()
+            last_close = float(data['Close'].dropna().iloc[-1])
+            high = float(data['High'].max())
+            low = float(data['Low'].min())
 
             # Fibonacci Levels
             fib_levels = [0.236, 0.382, 0.5, 0.618, 0.786]
@@ -84,7 +82,7 @@ if stock_name:
             avg_loss = loss.rolling(window=14).mean()
             rs = avg_gain / avg_loss
             rsi = 100 - (100 / (1 + rs))
-            current_rsi = round(rsi.iloc[-1], 2)
+            current_rsi = round(float(rsi.dropna().iloc[-1]), 2)
 
             # Moving Averages with Safe Checks
             ma20 = round(data['Close'].rolling(window=20).mean().iloc[-1], 2) if len(data) >= 20 else "Insufficient data"
@@ -136,6 +134,12 @@ if stock_name:
             if isinstance(ma200, (int, float)):
                 fig.add_trace(go.Scatter(x=data.index, y=data['Close'].rolling(window=200).mean(),
                                          mode='lines', name='MA200', line=dict(color='green')))
+
+            # Overlay Fibonacci levels
+            for level_val in fib_values.values():
+                fig.add_shape(type="line", x0=data.index[0], x1=data.index[-1], y0=level_val, y1=level_val,
+                             line=dict(color="purple", dash="dot"), opacity=0.5)
+
             fig.update_layout(xaxis_rangeslider_visible=False, template="plotly_dark", height=600)
             st.plotly_chart(fig, use_container_width=True)
 
