@@ -6,7 +6,7 @@ import traceback
 import plotly.graph_objs as go
 import requests
 
-st.set_page_config(page_title="Stock Analyzer", layout="centered")
+st.set_page_config(page_title="Stock Analyzer", layout="wide")
 st.title("\U0001F4CA Deep Stock Analysis Tool")
 
 # Function to suggest correct stock symbols
@@ -25,7 +25,7 @@ def suggest_symbols(query):
 stock_name = st.text_input("Enter Stock Symbol (e.g., TILAK.NS):")
 timeframe = st.selectbox("Select Timeframe:", ["1d", "1wk", "1mo"])
 
-# Temporarily assume fundamentals are good to avoid scraping issues
+# Assume fundamentals are good to avoid scraping issues
 def check_fundamentals(symbol):
     return True
 
@@ -36,7 +36,7 @@ if stock_name:
             data = yf.download(stock_name, period="1y", interval=timeframe, progress=False, threads=False).dropna()
 
         if data is None or data.empty or 'Close' not in data.columns:
-            st.warning("⚠️ No data found. Checking for close matches...")
+            st.warning("\u26A0\ufe0f No data found. Checking for close matches...")
             suggestions = suggest_symbols(stock_name)
             if suggestions:
                 st.info("Did you mean one of these?")
@@ -44,7 +44,7 @@ if stock_name:
                     st.markdown(f"- **{s}**")
                 st.stop()
             else:
-                st.error("❌ Could not find any matching stock symbols. Please double-check the symbol.")
+                st.error("\u274C Could not find any matching stock symbols. Please double-check the symbol.")
                 st.stop()
 
         if len(data) < 15:
@@ -74,7 +74,7 @@ if stock_name:
 
             # Fibonacci Levels
             fib_levels = [0.236, 0.382, 0.5, 0.618, 0.786]
-            fib_values = {f"Fib {int(level*100)}%": round(high - (high - low) * level, 2) for level in fib_levels}
+            fib_values = {f"{int(level*100)}%": round(high - (high - low) * level, 2) for level in fib_levels}
 
             # RSI
             delta = data['Close'].diff()
@@ -87,38 +87,32 @@ if stock_name:
             current_rsi = round(rsi.iloc[-1], 2)
 
             # Moving Averages with Safe Checks
-            ma20 = round(data['Close'].rolling(window=20).mean().iloc[-1], 2) if len(data) >= 20 else "N/A"
-            ma50 = round(data['Close'].rolling(window=50).mean().iloc[-1], 2) if len(data) >= 50 else "N/A"
-            ma200 = round(data['Close'].rolling(window=200).mean().iloc[-1], 2) if len(data) >= 200 else "N/A"
+            ma20 = round(data['Close'].rolling(window=20).mean().iloc[-1], 2) if len(data) >= 20 else "Insufficient data"
+            ma50 = round(data['Close'].rolling(window=50).mean().iloc[-1], 2) if len(data) >= 50 else "Insufficient data"
+            ma200 = round(data['Close'].rolling(window=200).mean().iloc[-1], 2) if len(data) >= 200 else "Insufficient data"
 
             # Pivot Points
             pivot = (high + low + last_close) / 3
             r1 = 2 * pivot - low
             s1 = 2 * pivot - high
 
-            entry_range = f"{round(pivot * 0.98, 2)} - {round(pivot * 1.02, 2)}"
-            target_range = f"{round(r1, 2)} - {round(r1 + (r1 - pivot), 2)}"
+            entry_range = f"{round(pivot * 0.98, 2)} to {round(pivot * 1.02, 2)}"
+            target_range = f"{round(r1, 2)} to {round(r1 + (r1 - pivot), 2)}"
             stop_loss = round(s1, 2)
 
             # Display Results
-            result_table = pd.DataFrame({
-                'Stock Name': [stock_name],
-                'Timeframe Used': [timeframe],
-                'Entry Level': [entry_range],
-                'Target Level': [target_range],
-                'Stop Loss': [stop_loss],
-                'RSI': [current_rsi],
-                'MA20': [ma20],
-                'MA50': [ma50],
-                'MA200': [ma200],
-                'Pivot': [round(pivot, 2)]
-            })
-
             st.subheader("\U0001F4CB Final Trade Plan")
-            st.table(result_table)
+            st.metric("Entry Range", entry_range)
+            st.metric("Target Range", target_range)
+            st.metric("Stop Loss", stop_loss)
+            st.metric("Current RSI", current_rsi)
+            st.metric("20-Day MA", ma20)
+            st.metric("50-Day MA", ma50)
+            st.metric("200-Day MA", ma200)
 
-            with st.expander("\U0001F4C8 Fibonacci Levels"):
-                st.json(fib_values)
+            with st.expander("\U0001F4C8 Fibonacci Retracement Levels"):
+                for level, val in fib_values.items():
+                    st.write(f"{level}: ₹{val}")
 
             # Interactive Chart
             st.subheader("\U0001F4C9 Interactive Stock Chart")
@@ -129,15 +123,15 @@ if stock_name:
                 high=data['High'],
                 low=data['Low'],
                 close=data['Close'],
-                name='Candles'
+                name='Candlesticks'
             ))
-            if ma20 != "N/A":
+            if isinstance(ma20, (int, float)):
                 fig.add_trace(go.Scatter(x=data.index, y=data['Close'].rolling(window=20).mean(),
                                          mode='lines', name='MA20', line=dict(color='blue')))
-            if ma50 != "N/A":
+            if isinstance(ma50, (int, float)):
                 fig.add_trace(go.Scatter(x=data.index, y=data['Close'].rolling(window=50).mean(),
                                          mode='lines', name='MA50', line=dict(color='orange')))
-            if ma200 != "N/A":
+            if isinstance(ma200, (int, float)):
                 fig.add_trace(go.Scatter(x=data.index, y=data['Close'].rolling(window=200).mean(),
                                          mode='lines', name='MA200', line=dict(color='green')))
             fig.update_layout(xaxis_rangeslider_visible=False, template="plotly_dark", height=600)
@@ -149,7 +143,7 @@ if stock_name:
     except Exception as e:
         err_msg = str(e)
         if '-1' in err_msg:
-            st.error("⚠️ Data fetch error: Invalid symbol or Yahoo Finance response. Try changing the timeframe.")
+            st.error("\u26A0\ufe0f Data fetch error: Invalid symbol or Yahoo Finance response. Try changing the timeframe.")
         else:
             st.error(f"Unexpected Error: {err_msg}")
         with st.expander("\U0001F50D Error Details"):
