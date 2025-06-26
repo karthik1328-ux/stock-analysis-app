@@ -80,10 +80,18 @@ if company_input:
         try:
             ticker = yf.Ticker(symbol)
             info = ticker.info
+
+            # Try fetching data with fallback logic
             df = ticker.history(period="6mo", interval=timeframe)
+            fallback_intervals = {"1d": "5d", "1wk": "1mo", "1mo": "3mo"}
+            if df.empty:
+                fallback = fallback_intervals.get(timeframe)
+                if fallback:
+                    df = ticker.history(period="6mo", interval=fallback)
+                    st.warning(f"Selected timeframe '{timeframe}' had no data. Showing data for '{fallback}' instead.")
 
             if df.empty:
-                st.warning("No data available for the selected timeframe.")
+                st.error("❌ No chart data available even after fallback. Please try a different stock or timeframe.")
                 st.stop()
 
             is_strong, sector = check_fundamentals(symbol)
@@ -120,9 +128,9 @@ if company_input:
             st.markdown("### 📌 Suggested Levels")
             levels_df = pd.DataFrame([{
                 "Stock Name": info.get("shortName", symbol),
-                "Entry Range (₹)": f"{entry}",
-                "Target Range (₹)": f"{target}",
-                "Stop Loss (₹)": f"{stop}",
+                "Entry Range (₹)": entry,
+                "Target Range (₹)": target,
+                "Stop Loss (₹)": stop,
                 "Valuation Position": valuation_comment
             }])
             st.dataframe(levels_df, use_container_width=True)
