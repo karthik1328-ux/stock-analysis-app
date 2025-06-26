@@ -5,97 +5,119 @@ import datetime
 import traceback
 import plotly.graph_objs as go
 import requests
+from difflib import get_close_matches
 
 st.set_page_config(page_title="Stock Analyzer", layout="wide")
 st.title("\U0001F4CA Deep Stock Analysis Tool")
 
-# Function to suggest correct stock symbols
+# Function to suggest correct stock symbols from company name
 def suggest_symbols(query):
     try:
         response = requests.get(f"https://query2.finance.yahoo.com/v1/finance/search?q={query}")
         if response.status_code == 200:
             results = response.json().get("quotes", [])
             suggestions = [f"{item['symbol']} ({item.get('shortname', '')})" for item in results[:5]]
-            return suggestions
-        return []
+            if results:
+                return results[0]['symbol'], suggestions
+        return None, []
     except:
-        return []
+        return None, []
 
 # User Inputs
-stock_name = st.text_input("Enter Stock Symbol (e.g., TILAK.NS):")
+stock_query = st.text_input("Enter Company Name (e.g., Reliance):")
 timeframe = st.selectbox("Select Timeframe:", ["1d", "1wk", "1mo"])
 
+# Sector-based key valuation logic
+SECTOR_RATIOS = {
+    "Banks": ["priceToBook", "returnOnEquity"],
+    "NBFCs": ["priceToBook", "trailingPE"],
+    "IT Services": ["trailingPE", "enterpriseToEbitda"],
+    "FMCG": ["trailingPE", "enterpriseToEbitda"],
+    "Pharmaceuticals": ["trailingPE", "enterpriseToEbitda"],
+    "Steel": ["enterpriseToEbitda"],
+    "Cement": ["enterpriseToEbitda"],
+    "Retail": ["trailingPE", "enterpriseToRevenue"],
+    # Add more mappings as needed
+}
+
 # Deep fundamental analysis using key ratios
+
 def check_fundamentals(symbol):
     try:
         ticker = yf.Ticker(symbol)
         info = ticker.info
+        sector = info.get("sector")
+        if not sector:
+            return False, None, {}
 
-        # Extract relevant metrics
-        pe = info.get("trailingPE")
-        pb = info.get("priceToBook")
-        roe = info.get("returnOnEquity")
-        debt_eq = info.get("debtToEquity")
-        current_ratio = info.get("currentRatio")
-
+        ratios = SECTOR_RATIOS.get(sector, [])
         score = 0
-        if pe and 5 < pe < 35: score += 1
-        if pb and 0 < pb < 10: score += 1
-        if roe and roe > 0.10: score += 1
-        if debt_eq and debt_eq < 1.5: score += 1
-        if current_ratio and current_ratio > 1: score += 1
+        fundamentals = {}
 
-        return score >= 4  # Require at least 4 metrics to be healthy
+        for ratio in ratios:
+            val = info.get(ratio)
+            fundamentals[ratio] = val
+            if val and isinstance(val, (int, float)) and val > 0:
+                score += 1
+
+        high_valued = False
+        if "trailingPE" in info and isinstance(info["trailingPE"], (int, float)):
+            high_valued = info["trailingPE"] > 40  # threshold for being overvalued
+
+        return score >= len(ratios) // 2, sector, fundamentals, high_valued
 
     except:
-        return False
+        return False, None, {}, False
 
 # Start analysis only when stock is entered
-if stock_name:
+if stock_query:
     try:
-        with st.spinner("Fetching stock data... Please wait."):
-            data = yf.download(stock_name, period="1y", interval=timeframe, progress=False, threads=False).dropna()
+        with st.spinner("Resolving company symbol and fetching data..."):
+            symbol, suggestions = suggest_symbols(stock_query)
+
+        if not symbol:
+            st.warning("⚠️ Could not resolve the company name. Did you mean:")
+            for s in suggestions:
+                st.markdown(f"- **{s}**")
+            st.stop()
+
+        data = yf.download(symbol, period="1y", interval=timeframe, progress=False, threads=False).dropna()
 
         if data is None or data.empty or 'Close' not in data.columns:
-            st.warning("⚠️ No data found. Checking for close matches...")
-            suggestions = suggest_symbols(stock_name)
-            if suggestions:
-                st.info("Did you mean one of these?")
-                for s in suggestions:
-                    st.markdown(f"- **{s}**")
-                st.stop()
-            else:
-                st.error("❌ Could not find any matching stock symbols. Please double-check the symbol.")
-                st.stop()
+            st.error("❌ Data unavailable or incorrect.")
+            st.stop()
 
         if len(data) < 15:
-            st.warning("Not enough data for RSI or moving averages. Trying higher timeframe...")
-            alternative_timeframes = {"1d": "1wk", "1wk": "1mo", "1mo": None}
-            next_timeframe = alternative_timeframes.get(timeframe)
-            if next_timeframe:
-                st.info(f"Automatically retrying with '{next_timeframe}' timeframe.")
-                data = yf.download(stock_name, period="1y", interval=next_timeframe, progress=False, threads=False).dropna()
-                timeframe = next_timeframe
-                if data is None or data.empty or 'Close' not in data.columns:
-                    raise ValueError("Failed to fetch data. Even retry failed.")
+            st.warning("Not enough data for analysis. Trying higher timeframe...")
+            alt_frames = {"1d": "1wk", "1wk": "1mo", "1mo": None}
+            next_tf = alt_frames.get(timeframe)
+            if next_tf:
+                data = yf.download(symbol, period="1y", interval=next_tf, progress=False, threads=False).dropna()
+                timeframe = next_tf
             else:
-                st.error("Unable to find suitable timeframe with enough data.")
+                st.error("No data found with any timeframe.")
                 st.stop()
 
         st.subheader("\U0001F50D Fundamental Strength Check")
-        if check_fundamentals(stock_name):
-            st.success("Stock appears fundamentally strong. Proceeding with technical analysis.")
+        is_strong, sector, fundamentals, is_high = check_fundamentals(symbol)
 
-            # Price Action
+        if is_strong:
+            st.success(f"Stock appears fundamentally strong in **{sector}** sector. Proceeding with technical analysis.")
+
+            if is_high:
+                st.warning("⚠️ The stock appears to be trading at a high valuation based on its sector metrics.")
+
+            st.write("### Key Fundamental Ratios")
+            for k, v in fundamentals.items():
+                st.write(f"**{k}:** {v}")
+
             last_close = float(data['Close'].dropna().iloc[-1])
             high = float(data['High'].max())
             low = float(data['Low'].min())
 
-            # Fibonacci Levels
             fib_levels = [0.236, 0.382, 0.5, 0.618, 0.786]
             fib_values = {f"{int(level*100)}%": round(high - (high - low) * level, 2) for level in fib_levels}
 
-            # RSI
             delta = data['Close'].diff()
             gain = delta.where(delta > 0, 0)
             loss = -delta.where(delta < 0, 0)
@@ -105,12 +127,10 @@ if stock_name:
             rsi = 100 - (100 / (1 + rs))
             current_rsi = round(float(rsi.dropna().iloc[-1]), 2)
 
-            # Moving Averages with Safe Checks
-            ma20 = round(data['Close'].rolling(window=20).mean().iloc[-1], 2) if len(data) >= 20 else "Insufficient data"
-            ma50 = round(data['Close'].rolling(window=50).mean().iloc[-1], 2) if len(data) >= 50 else "Insufficient data"
-            ma200 = round(data['Close'].rolling(window=200).mean().iloc[-1], 2) if len(data) >= 200 else "Insufficient data"
+            ma20 = round(data['Close'].rolling(window=20).mean().iloc[-1], 2) if len(data) >= 20 else "-"
+            ma50 = round(data['Close'].rolling(window=50).mean().iloc[-1], 2) if len(data) >= 50 else "-"
+            ma200 = round(data['Close'].rolling(window=200).mean().iloc[-1], 2) if len(data) >= 200 else "-"
 
-            # Pivot Points
             pivot = (high + low + last_close) / 3
             r1 = 2 * pivot - low
             s1 = 2 * pivot - high
@@ -121,7 +141,6 @@ if stock_name:
             target_high = round(r1 + (r1 - pivot), 2)
             stop_loss = round(s1, 2)
 
-            # Display Results
             st.subheader("\U0001F4CB Final Trade Plan")
             st.write(f"**Entry Range:** ₹{entry_low} - ₹{entry_high}")
             st.write(f"**Target Range:** ₹{target_low} - ₹{target_high}")
@@ -135,7 +154,6 @@ if stock_name:
                 for level, val in fib_values.items():
                     st.write(f"{level}: ₹{val}")
 
-            # Interactive Chart
             st.subheader("\U0001F4C9 Interactive Stock Chart")
             fig = go.Figure()
             fig.add_trace(go.Candlestick(
@@ -144,8 +162,8 @@ if stock_name:
                 high=data['High'],
                 low=data['Low'],
                 close=data['Close'],
-                name='Candlesticks'
-            ))
+                name='Candlesticks'))
+
             if isinstance(ma20, (int, float)):
                 fig.add_trace(go.Scatter(x=data.index, y=data['Close'].rolling(window=20).mean(),
                                          mode='lines', name='MA20', line=dict(color='blue')))
@@ -158,7 +176,7 @@ if stock_name:
 
             for level_val in fib_values.values():
                 fig.add_shape(type="line", x0=data.index[0], x1=data.index[-1], y0=level_val, y1=level_val,
-                             line=dict(color="purple", dash="dot"), opacity=0.5)
+                              line=dict(color="purple", dash="dot"), opacity=0.5)
 
             fig.update_layout(xaxis_rangeslider_visible=False, template="plotly_dark", height=600)
             st.plotly_chart(fig, use_container_width=True)
@@ -167,10 +185,6 @@ if stock_name:
             st.error("Stock is NOT fundamentally strong. No technical analysis performed.")
 
     except Exception as e:
-        err_msg = str(e)
-        if '-1' in err_msg:
-            st.error("⚠️ Data fetch error: Invalid symbol or Yahoo Finance response. Try changing the timeframe.")
-        else:
-            st.error(f"Unexpected Error: {err_msg}")
+        st.error(f"Unexpected Error: {str(e)}")
         with st.expander("\U0001F50D Error Details"):
             st.code(traceback.format_exc())
