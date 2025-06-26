@@ -10,8 +10,8 @@ from difflib import get_close_matches
 st.set_page_config(page_title="Stock Analyzer - Candles & Capital", layout="wide")
 st.title("📊 Deep Stock Analysis Tool")
 
-# Institute branding
-st.sidebar.image("https://i.imgur.com/NVZs7jb.png", use_column_width=True)  # Replace with your logo URL
+# Institute branding (corrected logo URL and updated parameter)
+st.sidebar.image("https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Candlestick_chart_icon.svg/1200px-Candlestick_chart_icon.svg.png", use_container_width=True)
 st.sidebar.title("Candles & Capital")
 st.sidebar.markdown("📍 Visakhapatnam, Andhra Pradesh")
 st.sidebar.markdown("Professional Stock Market Training Institute")
@@ -99,6 +99,7 @@ if company_input:
             fig.add_trace(go.Candlestick(x=df.index,
                             open=df['Open'], high=df['High'],
                             low=df['Low'], close=df['Close']))
+            fig.update_layout(xaxis_rangeslider_visible=False)
             st.plotly_chart(fig, use_container_width=True)
 
             # Technicals
@@ -116,10 +117,10 @@ if company_input:
 
             st.markdown("### 📌 Suggested Levels")
             levels_df = pd.DataFrame([{
-                "Stock Name": info.get("shortName"),
-                "Entry Range (₹)": f"{entry}",
-                "Target Range (₹)": f"{target}",
-                "Stop Loss (₹)": f"{stop}",
+                "Stock Name": info.get("shortName", symbol),
+                "Entry Range (₹)": entry,
+                "Target Range (₹)": target,
+                "Stop Loss (₹)": stop,
                 "Valuation Position": valuation_comment
             }])
             st.dataframe(levels_df, use_container_width=True)
