@@ -33,7 +33,7 @@ def check_fundamentals(symbol):
 if stock_name:
     try:
         with st.spinner("Fetching stock data... Please wait."):
-            data = yf.download(stock_name, period="1y", interval=timeframe, progress=False, threads=False)
+            data = yf.download(stock_name, period="1y", interval=timeframe, progress=False, threads=False).dropna()
 
         if data is None or data.empty or 'Close' not in data.columns:
             st.warning("⚠️ No data found. Checking for close matches...")
@@ -53,7 +53,7 @@ if stock_name:
             next_timeframe = alternative_timeframes.get(timeframe)
             if next_timeframe:
                 st.info(f"Automatically retrying with '{next_timeframe}' timeframe.")
-                data = yf.download(stock_name, period="1y", interval=next_timeframe, progress=False, threads=False)
+                data = yf.download(stock_name, period="1y", interval=next_timeframe, progress=False, threads=False).dropna()
                 timeframe = next_timeframe
                 if data is None or data.empty or 'Close' not in data.columns:
                     raise ValueError("Failed to fetch data. Even retry failed.")
@@ -66,7 +66,9 @@ if stock_name:
             st.success("Stock appears fundamentally strong. Proceeding with technical analysis.")
 
             # Price Action
-            last_close = data['Close'][-1]
+            if 'Close' not in data.columns or data['Close'].dropna().empty:
+                raise ValueError("No valid closing prices found in the data.")
+            last_close = data['Close'].dropna().iloc[-1]
             high = data['High'].max()
             low = data['Low'].min()
 
