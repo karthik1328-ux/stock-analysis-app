@@ -19,24 +19,25 @@ def check_fundamentals(symbol):
 # Start analysis only when stock is entered
 if stock_name:
     try:
-        data = yf.download(stock_name, period="1y", interval=timeframe)
-        if data.empty:
-            st.warning("No data available. Please check the symbol or timeframe.")
-        elif len(data) < 15:
+        with st.spinner("Fetching stock data... Please wait."):
+            data = yf.download(stock_name, period="1y", interval=timeframe, progress=False, threads=False)
+
+        if data is None or data.empty or 'Close' not in data.columns:
+            raise ValueError("Failed to fetch data. Check symbol or timeframe.")
+
+        if len(data) < 15:
             st.warning("Not enough data for RSI or moving averages. Trying higher timeframe...")
             alternative_timeframes = {"1d": "1wk", "1wk": "1mo", "1mo": None}
             next_timeframe = alternative_timeframes.get(timeframe)
             if next_timeframe:
                 st.info(f"Automatically retrying with '{next_timeframe}' timeframe.")
-                data = yf.download(stock_name, period="1y", interval=next_timeframe)
+                data = yf.download(stock_name, period="1y", interval=next_timeframe, progress=False, threads=False)
                 timeframe = next_timeframe
+                if data is None or data.empty or 'Close' not in data.columns:
+                    raise ValueError("Failed to fetch data. Even retry failed.")
             else:
                 st.error("Unable to find suitable timeframe with enough data.")
                 st.stop()
-
-        if data.empty or len(data) < 15:
-            st.error("Data still insufficient. Please try a different stock or timeframe manually.")
-            st.stop()
 
         st.subheader("🔍 Fundamental Strength Check")
         if check_fundamentals(stock_name):
@@ -122,6 +123,10 @@ if stock_name:
             st.error("Stock is NOT fundamentally strong. No technical analysis performed.")
 
     except Exception as e:
-        st.error(f"Error occurred: {e}")
+        err_msg = str(e)
+        if '-1' in err_msg:
+            st.error("⚠️ Data fetch error: Invalid symbol or Yahoo Finance response. Try changing the timeframe.")
+        else:
+            st.error(f"Unexpected Error: {err_msg}")
         with st.expander("🔍 Error Details"):
             st.code(traceback.format_exc())
