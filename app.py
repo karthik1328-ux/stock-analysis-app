@@ -104,9 +104,9 @@ if stock_name:
 
             # Display Results
             st.subheader("\U0001F4CB Final Trade Plan")
-            st.metric("Entry Range", f"₹{entry_low} - ₹{entry_high}")
-            st.metric("Target Range", f"₹{target_low} - ₹{target_high}")
-            st.metric("Stop Loss", f"₹{stop_loss}")
+            st.write(f"**Entry Range:** ₹{entry_low} - ₹{entry_high}")
+            st.write(f"**Target Range:** ₹{target_low} - ₹{target_high}")
+            st.write(f"**Stop Loss:** ₹{stop_loss}")
             st.metric("Current RSI", current_rsi)
             st.metric("20-Day MA", ma20)
             st.metric("50-Day MA", ma50)
