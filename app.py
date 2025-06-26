@@ -36,7 +36,7 @@ if stock_name:
             data = yf.download(stock_name, period="1y", interval=timeframe, progress=False, threads=False).dropna()
 
         if data is None or data.empty or 'Close' not in data.columns:
-            st.warning("\u26A0\ufe0f No data found. Checking for close matches...")
+            st.warning("⚠️ No data found. Checking for close matches...")
             suggestions = suggest_symbols(stock_name)
             if suggestions:
                 st.info("Did you mean one of these?")
@@ -44,7 +44,7 @@ if stock_name:
                     st.markdown(f"- **{s}**")
                 st.stop()
             else:
-                st.error("\u274C Could not find any matching stock symbols. Please double-check the symbol.")
+                st.error("❌ Could not find any matching stock symbols. Please double-check the symbol.")
                 st.stop()
 
         if len(data) < 15:
@@ -96,15 +96,17 @@ if stock_name:
             r1 = 2 * pivot - low
             s1 = 2 * pivot - high
 
-            entry_range = f"{round(pivot * 0.98, 2)} to {round(pivot * 1.02, 2)}"
-            target_range = f"{round(r1, 2)} to {round(r1 + (r1 - pivot), 2)}"
+            entry_low = round(pivot * 0.98, 2)
+            entry_high = round(pivot * 1.02, 2)
+            target_low = round(r1, 2)
+            target_high = round(r1 + (r1 - pivot), 2)
             stop_loss = round(s1, 2)
 
             # Display Results
             st.subheader("\U0001F4CB Final Trade Plan")
-            st.metric("Entry Range", entry_range)
-            st.metric("Target Range", target_range)
-            st.metric("Stop Loss", stop_loss)
+            st.metric("Entry Range", f"₹{entry_low} - ₹{entry_high}")
+            st.metric("Target Range", f"₹{target_low} - ₹{target_high}")
+            st.metric("Stop Loss", f"₹{stop_loss}")
             st.metric("Current RSI", current_rsi)
             st.metric("20-Day MA", ma20)
             st.metric("50-Day MA", ma50)
@@ -143,7 +145,7 @@ if stock_name:
     except Exception as e:
         err_msg = str(e)
         if '-1' in err_msg:
-            st.error("\u26A0\ufe0f Data fetch error: Invalid symbol or Yahoo Finance response. Try changing the timeframe.")
+            st.error("⚠️ Data fetch error: Invalid symbol or Yahoo Finance response. Try changing the timeframe.")
         else:
             st.error(f"Unexpected Error: {err_msg}")
         with st.expander("\U0001F50D Error Details"):
