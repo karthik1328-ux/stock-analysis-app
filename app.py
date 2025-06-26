@@ -2,6 +2,8 @@ import yfinance as yf
 import pandas as pd
 import streamlit as st
 import datetime
+import traceback
+import plotly.graph_objs as go
 
 st.set_page_config(page_title="Stock Analyzer", layout="centered")
 st.title("📊 Deep Stock Analysis Tool")
@@ -93,7 +95,33 @@ if stock_name:
             with st.expander("📈 Fibonacci Levels"):
                 st.json(fib_values)
 
+            # Interactive Chart
+            st.subheader("📉 Interactive Stock Chart")
+            fig = go.Figure()
+            fig.add_trace(go.Candlestick(
+                x=data.index,
+                open=data['Open'],
+                high=data['High'],
+                low=data['Low'],
+                close=data['Close'],
+                name='Candles'
+            ))
+            if ma20 != "N/A":
+                fig.add_trace(go.Scatter(x=data.index, y=data['Close'].rolling(window=20).mean(),
+                                         mode='lines', name='MA20', line=dict(color='blue')))
+            if ma50 != "N/A":
+                fig.add_trace(go.Scatter(x=data.index, y=data['Close'].rolling(window=50).mean(),
+                                         mode='lines', name='MA50', line=dict(color='orange')))
+            if ma200 != "N/A":
+                fig.add_trace(go.Scatter(x=data.index, y=data['Close'].rolling(window=200).mean(),
+                                         mode='lines', name='MA200', line=dict(color='green')))
+            fig.update_layout(xaxis_rangeslider_visible=False, template="plotly_dark", height=600)
+            st.plotly_chart(fig, use_container_width=True)
+
         else:
             st.error("Stock is NOT fundamentally strong. No technical analysis performed.")
+
     except Exception as e:
         st.error(f"Error occurred: {e}")
+        with st.expander("🔍 Error Details"):
+            st.code(traceback.format_exc())
