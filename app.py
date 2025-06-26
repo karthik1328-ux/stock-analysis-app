@@ -4,9 +4,22 @@ import streamlit as st
 import datetime
 import traceback
 import plotly.graph_objs as go
+import requests
 
 st.set_page_config(page_title="Stock Analyzer", layout="centered")
-st.title("📊 Deep Stock Analysis Tool")
+st.title("\U0001F4CA Deep Stock Analysis Tool")
+
+# Function to suggest correct stock symbols
+def suggest_symbols(query):
+    try:
+        response = requests.get(f"https://query2.finance.yahoo.com/v1/finance/search?q={query}")
+        if response.status_code == 200:
+            results = response.json().get("quotes", [])
+            suggestions = [f"{item['symbol']} ({item.get('shortname', '')})" for item in results[:5]]
+            return suggestions
+        return []
+    except:
+        return []
 
 # User Inputs
 stock_name = st.text_input("Enter Stock Symbol (e.g., TILAK.NS):")
@@ -23,7 +36,16 @@ if stock_name:
             data = yf.download(stock_name, period="1y", interval=timeframe, progress=False, threads=False)
 
         if data is None or data.empty or 'Close' not in data.columns:
-            raise ValueError("Failed to fetch data. Check symbol or timeframe.")
+            st.warning("⚠️ No data found. Checking for close matches...")
+            suggestions = suggest_symbols(stock_name)
+            if suggestions:
+                st.info("Did you mean one of these?")
+                for s in suggestions:
+                    st.markdown(f"- **{s}**")
+                st.stop()
+            else:
+                st.error("❌ Could not find any matching stock symbols. Please double-check the symbol.")
+                st.stop()
 
         if len(data) < 15:
             st.warning("Not enough data for RSI or moving averages. Trying higher timeframe...")
@@ -39,7 +61,7 @@ if stock_name:
                 st.error("Unable to find suitable timeframe with enough data.")
                 st.stop()
 
-        st.subheader("🔍 Fundamental Strength Check")
+        st.subheader("\U0001F50D Fundamental Strength Check")
         if check_fundamentals(stock_name):
             st.success("Stock appears fundamentally strong. Proceeding with technical analysis.")
 
@@ -90,14 +112,14 @@ if stock_name:
                 'Pivot': [round(pivot, 2)]
             })
 
-            st.subheader("📋 Final Trade Plan")
+            st.subheader("\U0001F4CB Final Trade Plan")
             st.table(result_table)
 
-            with st.expander("📈 Fibonacci Levels"):
+            with st.expander("\U0001F4C8 Fibonacci Levels"):
                 st.json(fib_values)
 
             # Interactive Chart
-            st.subheader("📉 Interactive Stock Chart")
+            st.subheader("\U0001F4C9 Interactive Stock Chart")
             fig = go.Figure()
             fig.add_trace(go.Candlestick(
                 x=data.index,
@@ -128,5 +150,5 @@ if stock_name:
             st.error("⚠️ Data fetch error: Invalid symbol or Yahoo Finance response. Try changing the timeframe.")
         else:
             st.error(f"Unexpected Error: {err_msg}")
-        with st.expander("🔍 Error Details"):
+        with st.expander("\U0001F50D Error Details"):
             st.code(traceback.format_exc())
