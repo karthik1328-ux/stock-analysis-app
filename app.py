@@ -10,11 +10,12 @@ from difflib import get_close_matches
 st.set_page_config(page_title="Stock Analyzer - Candles & Capital", layout="wide")
 st.title("📊 Deep Stock Analysis Tool")
 
-# Institute branding (corrected logo URL and updated parameter)
-st.sidebar.image("https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Candlestick_chart_icon.svg/1200px-Candlestick_chart_icon.svg.png", use_container_width=True)
-st.sidebar.title("Candles & Capital")
-st.sidebar.markdown("📍 Visakhapatnam, Andhra Pradesh")
-st.sidebar.markdown("Professional Stock Market Training Institute")
+# Institute branding (mobile-friendly)
+with st.sidebar:
+    st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Candlestick_chart_icon.svg/1200px-Candlestick_chart_icon.svg.png", use_container_width=True)
+    st.title("Candles & Capital")
+    st.markdown("📍 Visakhapatnam, Andhra Pradesh")
+    st.markdown("Professional Stock Market Training Institute")
 
 # Map for fuzzy match
 company_map = {
@@ -68,7 +69,8 @@ def check_fundamentals(symbol):
     except:
         return False, None
 
-# UI
+# Inputs with compact layout
+st.markdown("## 🧠 Enter Analysis Criteria")
 company_input = st.text_input("Enter Company Name (e.g., Infosys, Reliance)")
 timeframe = st.selectbox("Select Timeframe", ["1d", "1wk", "1mo"])
 
@@ -81,16 +83,23 @@ if company_input:
             ticker = yf.Ticker(symbol)
             info = ticker.info
 
-            # Try fetching data with fallback logic
-            df = ticker.history(period="6mo", interval=timeframe)
+            interval_period_map = {
+                "1d": "1mo",
+                "1wk": "1y",
+                "1mo": "2y"
+            }
+            selected_period = interval_period_map.get(timeframe, "6mo")
+            df = ticker.history(period=selected_period, interval=timeframe)
+
             fallback_intervals = {"1d": "5d", "1wk": "1mo", "1mo": "3mo"}
-            if df.empty:
+            if df.empty or df['Close'].isnull().all():
                 fallback = fallback_intervals.get(timeframe)
                 if fallback:
-                    df = ticker.history(period="6mo", interval=fallback)
-                    st.warning(f"Selected timeframe '{timeframe}' had no data. Showing data for '{fallback}' instead.")
+                    st.warning(f"Selected timeframe '{timeframe}' had no data. Trying fallback: '{fallback}'")
+                    df = ticker.history(period=selected_period, interval=fallback)
+                    timeframe = fallback
 
-            if df.empty:
+            if df.empty or df['Close'].isnull().all():
                 st.error("❌ No chart data available even after fallback. Please try a different stock or timeframe.")
                 st.stop()
 
@@ -109,7 +118,7 @@ if company_input:
             fig.add_trace(go.Candlestick(x=df.index,
                             open=df['Open'], high=df['High'],
                             low=df['Low'], close=df['Close']))
-            fig.update_layout(xaxis_rangeslider_visible=False)
+            fig.update_layout(xaxis_rangeslider_visible=False, height=500)
             st.plotly_chart(fig, use_container_width=True)
 
             # Technicals
@@ -128,12 +137,14 @@ if company_input:
             st.markdown("### 📌 Suggested Levels")
             levels_df = pd.DataFrame([{
                 "Stock Name": info.get("shortName", symbol),
-                "Entry Range (₹)": entry,
-                "Target Range (₹)": target,
-                "Stop Loss (₹)": stop,
+                "Entry Range (₹)": float(entry),
+                "Target Range (₹)": float(target),
+                "Stop Loss (₹)": float(stop),
                 "Valuation Position": valuation_comment
             }])
-            st.dataframe(levels_df, use_container_width=True)
+            st.dataframe(levels_df.style.set_table_styles([
+                {"selector": "thead th", "props": [("font-size", "14px")]},
+                {"selector": "td", "props": [("font-size", "13px")]}]), use_container_width=True)
 
         except Exception as e:
             st.error("An error occurred during processing.")
