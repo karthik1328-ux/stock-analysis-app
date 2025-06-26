@@ -6,13 +6,13 @@ Institute branding (mobile-friendly)
 
 with st.sidebar: st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Candlestick_chart_icon.svg/1200px-Candlestick_chart_icon.svg.png", use_container_width=True) st.title("Candles & Capital") st.markdown("📍 Visakhapatnam, Andhra Pradesh") st.markdown("Professional Stock Market Training Institute")
 
-Sample NSE 500 mapping for fuzzy match (expandable as needed)
+Map for fuzzy match
 
 company_map = { "TCS": "Tata Consultancy Services", "INFY": "Infosys", "RELIANCE": "Reliance Industries", "HDFCBANK": "HDFC Bank", "ICICIBANK": "ICICI Bank", "ASIANPAINT": "Asian Paints", "SUNPHARMA": "Sun Pharma", "ITC": "ITC Limited", "MARUTI": "Maruti Suzuki" }
 
 Sector-based valuation check
 
-SECTOR_RATIOS = { "Banks": ["priceToBook", "returnOnEquity"], "NBFCs": ["priceToBook", "trailingPE"], "IT Services": ["trailingPE", "enterpriseToEbitda"], "FMCG": ["trailingPE", "enterpriseToEbitda"], "Pharmaceuticals": ["trailingPE", "enterpriseToEbitda"], "Steel": ["enterpriseToEbitda"], "Cement": ["enterpriseToEbitda"], "Retail": ["trailingPE", "enterpriseToRevenue"], }
+SECTOR_RATIOS = { "Banks": ["priceToBook", "returnOnEquity"], "NBFCs": ["priceToBook", "trailingPE"], "IT Services": ["trailingPE", "enterpriseToEbitda"], "FMCG": ["trailingPE", "enterpriseToEbitda"], "Pharmaceuticals": ["trailingPE", "enterpriseToEbitda"], "Steel": ["enterpriseToEbitda"], "Cement": ["enterpriseToEbitda"], "Retail": ["trailingPE", "enterpriseToRevenue"] }
 
 Resolve stock symbol
 
@@ -89,7 +89,8 @@ interval_period_map = {
         }])
         st.dataframe(levels_df.style.set_table_styles([
             {"selector": "thead th", "props": [("font-size", "14px")]},
-            {"selector": "td", "props": [("font-size", "13px")]}]), use_container_width=True)
+            {"selector": "td", "props": [("font-size", "13px")]}
+        ]), use_container_width=True)
 
     except Exception as e:
         st.error("An error occurred during processing.")
