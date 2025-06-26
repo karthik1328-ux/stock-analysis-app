@@ -42,6 +42,7 @@ SECTOR_RATIOS = {
 }
 
 # Resolve stock symbol
+
 def get_symbol_from_name(company_name):
     closest = get_close_matches(company_name.lower(), [v.lower() for v in company_map.values()], n=1, cutoff=0.6)
     if closest:
@@ -51,6 +52,7 @@ def get_symbol_from_name(company_name):
     return None
 
 # Fundamental check
+
 def check_fundamentals(symbol):
     try:
         ticker = yf.Ticker(symbol)
@@ -118,9 +120,9 @@ if company_input:
             st.markdown("### 📌 Suggested Levels")
             levels_df = pd.DataFrame([{
                 "Stock Name": info.get("shortName", symbol),
-                "Entry Range (₹)": entry,
-                "Target Range (₹)": target,
-                "Stop Loss (₹)": stop,
+                "Entry Range (₹)": f"{entry}",
+                "Target Range (₹)": f"{target}",
+                "Stop Loss (₹)": f"{stop}",
                 "Valuation Position": valuation_comment
             }])
             st.dataframe(levels_df, use_container_width=True)
