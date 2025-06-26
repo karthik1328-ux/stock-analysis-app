@@ -1,7 +1,5 @@
 import yfinance as yf
 import pandas as pd
-import requests
-from bs4 import BeautifulSoup
 import streamlit as st
 import datetime
 
@@ -12,19 +10,9 @@ st.title("📊 Deep Stock Analysis Tool")
 stock_name = st.text_input("Enter Stock Symbol (e.g., TILAK.NS):")
 timeframe = st.selectbox("Select Timeframe:", ["1d", "1wk", "1mo"])
 
-# Function to check fundamentals (placeholder using web scrape simulation)
+# Temporarily assume fundamentals are good to avoid scraping issues
 def check_fundamentals(symbol):
-    try:
-        url = f"https://www.moneycontrol.com/india/stockpricequote/{symbol.lower()}"
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        response = requests.get(url, headers=headers, timeout=10)
-        soup = BeautifulSoup(response.content, 'html.parser')
-        news = soup.get_text().lower()
-        key_phrases = ["strong earnings", "positive guidance", "new orders", "upgrade"]
-        score = sum(phrase in news for phrase in key_phrases)
-        return score >= 2
-    except:
-        return False
+    return True
 
 # Start analysis only when stock is entered
 if stock_name:
