@@ -25,9 +25,30 @@ def suggest_symbols(query):
 stock_name = st.text_input("Enter Stock Symbol (e.g., TILAK.NS):")
 timeframe = st.selectbox("Select Timeframe:", ["1d", "1wk", "1mo"])
 
-# Assume fundamentals are good to avoid scraping issues
+# Deep fundamental analysis using key ratios
 def check_fundamentals(symbol):
-    return True
+    try:
+        ticker = yf.Ticker(symbol)
+        info = ticker.info
+
+        # Extract relevant metrics
+        pe = info.get("trailingPE")
+        pb = info.get("priceToBook")
+        roe = info.get("returnOnEquity")
+        debt_eq = info.get("debtToEquity")
+        current_ratio = info.get("currentRatio")
+
+        score = 0
+        if pe and 5 < pe < 35: score += 1
+        if pb and 0 < pb < 10: score += 1
+        if roe and roe > 0.10: score += 1
+        if debt_eq and debt_eq < 1.5: score += 1
+        if current_ratio and current_ratio > 1: score += 1
+
+        return score >= 4  # Require at least 4 metrics to be healthy
+
+    except:
+        return False
 
 # Start analysis only when stock is entered
 if stock_name:
@@ -135,7 +156,6 @@ if stock_name:
                 fig.add_trace(go.Scatter(x=data.index, y=data['Close'].rolling(window=200).mean(),
                                          mode='lines', name='MA200', line=dict(color='green')))
 
-            # Overlay Fibonacci levels
             for level_val in fib_values.values():
                 fig.add_shape(type="line", x0=data.index[0], x1=data.index[-1], y0=level_val, y1=level_val,
                              line=dict(color="purple", dash="dot"), opacity=0.5)
