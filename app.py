@@ -8,7 +8,7 @@ import requests
 from difflib import get_close_matches
 
 st.set_page_config(page_title="Stock Analyzer", layout="wide")
-st.title("\U0001F4CA Deep Stock Analysis Tool")
+st.title("📊 Deep Stock Analysis Tool")
 
 # Stock symbol finder with fuzzy match
 def get_symbol_from_name(company_name):
@@ -47,7 +47,7 @@ if company_input:
             if df.empty:
                 st.warning("No data available for the selected timeframe.")
             else:
-                st.subheader(f"\U0001F4C8 Price Chart: {info.get('shortName')} ({symbol})")
+                st.subheader(f"📈 Price Chart: {info.get('shortName')} ({symbol})")
                 fig = go.Figure()
                 fig.add_trace(go.Candlestick(x=df.index,
                                 open=df['Open'], high=df['High'],
