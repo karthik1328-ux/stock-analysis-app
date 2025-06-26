@@ -10,47 +10,65 @@ from difflib import get_close_matches
 st.set_page_config(page_title="Stock Analyzer", layout="wide")
 st.title("\U0001F4CA Deep Stock Analysis Tool")
 
-# Sector Rotation Highlighting
-SECTOR_LIST = [
-    ("Banks", False), ("NBFCs", False), ("IT Services", True), ("FMCG", True),
-    ("Pharmaceuticals", True), ("Steel", False), ("Cement", False), ("Retail", True),
-    ("Automobiles", True), ("Capital Goods / Infra", True), ("Power Utilities", True)
-]
+# Stock symbol finder with fuzzy match
+def get_symbol_from_name(company_name):
+    all_tickers = ["TCS", "INFY", "RELIANCE", "HDFCBANK", "ICICIBANK", "ASIANPAINT", "SUNPHARMA", "ITC", "MARUTI"]
+    company_map = {
+        "TCS": "Tata Consultancy Services",
+        "INFY": "Infosys",
+        "RELIANCE": "Reliance Industries",
+        "HDFCBANK": "HDFC Bank",
+        "ICICIBANK": "ICICI Bank",
+        "ASIANPAINT": "Asian Paints",
+        "SUNPHARMA": "Sun Pharma",
+        "ITC": "ITC Limited",
+        "MARUTI": "Maruti Suzuki"
+    }
+    closest = get_close_matches(company_name.lower(), [v.lower() for v in company_map.values()], n=1, cutoff=0.6)
+    if closest:
+        for k, v in company_map.items():
+            if v.lower() == closest[0]:
+                return k
+    return None
 
-selected_sector = st.selectbox("Select Sector:", [f"\033[92m{s[0]}\033[0m" if s[1] else s[0] for s in SECTOR_LIST])
-st.markdown("_Sectors in green are short-term favorable_", unsafe_allow_html=True)
+# Input
+company_input = st.text_input("Enter Company Name (e.g., Infosys, Reliance)")
+timeframe = st.selectbox("Select Timeframe", ["1d", "1wk", "1mo"])
 
-# Function to fetch good companies by sector
-@st.cache_data(show_spinner=False)
-def get_good_fundamentals(sector_name):
-    all_symbols = ["TCS", "INFY", "HDFCBANK", "ASIANPAINT", "SUNPHARMA", "ITC", "RELIANCE", "ICICIBANK", "MARUTI"]
-    results = []
-    for symbol in all_symbols:
+if company_input:
+    symbol = get_symbol_from_name(company_input)
+    if not symbol:
+        st.error("❌ Could not resolve the company name. Please check spelling or try another.")
+    else:
         try:
             ticker = yf.Ticker(symbol)
             info = ticker.info
-            if sector_name.lower() in str(info.get("sector", "")).lower():
-                pe = info.get("trailingPE") or 0
-                roe = info.get("returnOnEquity") or 0
-                if pe > 10 and roe > 10:
-                    last_close = ticker.history(period="1mo")['Close'].iloc[-1]
-                    target = round(last_close * 1.08, 2)
-                    stop = round(last_close * 0.95, 2)
-                    results.append({
-                        "Company": info.get("shortName"),
-                        "Symbol": symbol,
-                        "Entry": round(last_close, 2),
-                        "Target": target,
-                        "Stop Loss": stop
-                    })
-        except:
-            continue
-    return pd.DataFrame(results)
+            df = ticker.history(period="6mo", interval=timeframe)
+            if df.empty:
+                st.warning("No data available for the selected timeframe.")
+            else:
+                st.subheader(f"\U0001F4C8 Price Chart: {info.get('shortName')} ({symbol})")
+                fig = go.Figure()
+                fig.add_trace(go.Candlestick(x=df.index,
+                                open=df['Open'], high=df['High'],
+                                low=df['Low'], close=df['Close']))
+                st.plotly_chart(fig, use_container_width=True)
 
-if selected_sector:
-    st.subheader(f"\U0001F4BC Top Fundamental Stocks in {selected_sector.strip(chr(27))} Sector")
-    df = get_good_fundamentals(selected_sector.strip(chr(27)))
-    if not df.empty:
-        st.dataframe(df, use_container_width=True)
-    else:
-        st.info("No strong fundamental stocks found in this sector.")
+                # Basic Technical Levels
+                last_close = df['Close'].iloc[-1]
+                entry = round(last_close * 0.98, 2)
+                target = round(last_close * 1.08, 2)
+                stop = round(last_close * 0.94, 2)
+
+                st.markdown("### Suggested Levels")
+                levels_df = pd.DataFrame([{
+                    "Stock Name": info.get("shortName"),
+                    "Entry Range": entry,
+                    "Target Range": target,
+                    "Stop Loss": stop
+                }])
+                st.dataframe(levels_df, use_container_width=True)
+
+        except Exception as e:
+            st.error("An error occurred while fetching data.")
+            st.exception(e)
