@@ -6,23 +6,23 @@ Institute branding (mobile-friendly)
 
 with st.sidebar: st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Candlestick_chart_icon.svg/1200px-Candlestick_chart_icon.svg.png", use_container_width=True) st.title("Candles & Capital") st.markdown("📍 Visakhapatnam, Andhra Pradesh") st.markdown("Professional Stock Market Training Institute")
 
-Load NSE 500 data from CSV (ensure this file is included in the repo)
+Sample NSE 500 mapping for fuzzy match (expandable as needed)
 
-nse_df = pd.read_csv("nse_500_list.csv") company_names = nse_df['Company Name'].tolist()
+company_map = { "TCS": "Tata Consultancy Services", "INFY": "Infosys", "RELIANCE": "Reliance Industries", "HDFCBANK": "HDFC Bank", "ICICIBANK": "ICICI Bank", "ASIANPAINT": "Asian Paints", "SUNPHARMA": "Sun Pharma", "ITC": "ITC Limited", "MARUTI": "Maruti Suzuki" }
 
 Sector-based valuation check
 
 SECTOR_RATIOS = { "Banks": ["priceToBook", "returnOnEquity"], "NBFCs": ["priceToBook", "trailingPE"], "IT Services": ["trailingPE", "enterpriseToEbitda"], "FMCG": ["trailingPE", "enterpriseToEbitda"], "Pharmaceuticals": ["trailingPE", "enterpriseToEbitda"], "Steel": ["enterpriseToEbitda"], "Cement": ["enterpriseToEbitda"], "Retail": ["trailingPE", "enterpriseToRevenue"], }
 
-Resolve stock symbol from input name
+Resolve stock symbol
 
-def get_symbol_from_name(company_input): closest = get_close_matches(company_input.lower(), [name.lower() for name in company_names], n=1, cutoff=0.6) if closest: matched_row = nse_df[nse_df['Company Name'].str.lower() == closest[0]] if not matched_row.empty: return matched_row.iloc[0]['Symbol'] return None
+def get_symbol_from_name(company_name): closest = get_close_matches(company_name.lower(), [v.lower() for v in company_map.values()], n=1, cutoff=0.6) if closest: for symbol, name in company_map.items(): if name.lower() == closest[0]: return symbol return None
 
 Fundamental check
 
 def check_fundamentals(symbol): try: ticker = yf.Ticker(symbol) info = ticker.info sector = info.get("sector") ratios = SECTOR_RATIOS.get(sector, []) score = 0 for ratio in ratios: val = info.get(ratio) if isinstance(val, (int, float)) and val > 0: score += 1 return score >= max(1, len(ratios)//2), sector except: return False, None
 
-Inputs
+Inputs with compact layout
 
 st.markdown("## 🧠 Enter Analysis Criteria") company_input = st.text_input("Enter Company Name (e.g., Infosys, Reliance)") timeframe = st.selectbox("Select Timeframe", ["1d", "1wk", "1mo"])
 
