@@ -19,11 +19,25 @@ with st.sidebar:
 # 📌 Paste your full NSE 500 dictionary here
 company_map = {
     # Example entries (you should paste your full list)
-    "RELIANCE": "RELIANCE INDUSTRIES LTD",
-    "TCS": "TATA CONSULTANCY SERV LT",
-    "INFY": "INFOSYS LIMITED",
-    "HDFCBANK": "HDFC BANK LTD",
-    "SBIN": "STATE BANK OF INDIA"
+   import pandas as pd
+
+df = pd.read_excel("500 list.xlsx")
+df_cleaned = df.iloc[2:].copy()
+df_cleaned.columns = ["Index", "Symbol", "Company Name"]
+df_cleaned = df_cleaned[["Symbol", "Company Name"]].dropna()
+
+company_map = dict(zip(
+    df_cleaned["Symbol"].str.upper().str.strip(),
+    df_cleaned["Company Name"].str.strip()
+))
+
+# Save to a text file
+with open("company_map.txt", "w", encoding="utf-8") as f:
+    f.write("company_map = {\n")
+    for k, v in company_map.items():
+        f.write(f'    "{k}": "{v}",\n')
+    f.write("}")
+
     # ... and so on
 }
 
