@@ -1,16 +1,13 @@
+
 import yfinance as yf
 import pandas as pd
 import streamlit as st
-import datetime
 import traceback
-import requests
 from difflib import get_close_matches
 
-# Page configuration
 st.set_page_config(page_title="Stock Analyzer - Candles & Capital", layout="wide")
 st.title("📊 Deep Stock Analysis Tool")
 
-# Sidebar branding
 with st.sidebar:
     st.image(
         "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Candlestick_chart_icon.svg/1200px-Candlestick_chart_icon.svg.png",
@@ -20,18 +17,8 @@ with st.sidebar:
     st.markdown("📍 Visakhapatnam, Andhra Pradesh")
     st.markdown("Professional Stock Market Training Institute")
 
-# Company map for fuzzy match
-company_map = {
-    "TCS": "Tata Consultancy Services",
-    "INFY": "Infosys",
-    "RELIANCE": "Reliance Industries",
-    "HDFCBANK": "HDFC Bank",
-    "ICICIBANK": "ICICI Bank",
-    "ASIANPAINT": "Asian Paints",
-    "SUNPHARMA": "Sun Pharma",
-    "ITC": "ITC Limited",
-    "MARUTI": "Maruti Suzuki"
-}
+# NSE 500 simulated company map
+company_map = {'RELIANCE': 'Reliance Industries', 'TCS': 'Tata Consultancy Services', 'INFY': 'Infosys Ltd', 'HDFCBANK': 'HDFC Bank', 'ICICIBANK': 'ICICI Bank', 'ITC': 'ITC Ltd', 'SBIN': 'State Bank of India', 'LT': 'Larsen & Toubro', 'AXISBANK': 'Axis Bank', 'SUNPHARMA': 'Sun Pharmaceutical', 'HINDUNILVR': 'Hindustan Unilever', 'BAJFINANCE': 'Bajaj Finance', 'MARUTI': 'Maruti Suzuki', 'ULTRACEMCO': 'UltraTech Cement', 'ASIANPAINT': 'Asian Paints', 'COALINDIA': 'Coal India', 'NTPC': 'NTPC Ltd'}
 
 # Sector-based valuation check
 SECTOR_RATIOS = {
@@ -45,16 +32,18 @@ SECTOR_RATIOS = {
     "Retail": ["trailingPE", "enterpriseToRevenue"]
 }
 
-# Fuzzy matching company name to symbol
-def get_symbol_from_name(company_name):
-    closest = get_close_matches(company_name.lower(), [v.lower() for v in company_map.values()], n=1, cutoff=0.6)
+def get_symbol_from_name(company_input):
+    input_lower = company_input.lower()
+    for symbol in company_map:
+        if symbol.lower() == input_lower:
+            return symbol
+    closest = get_close_matches(input_lower, [v.lower() for v in company_map.values()], n=1, cutoff=0.6)
     if closest:
         for symbol, name in company_map.items():
             if name.lower() == closest[0]:
                 return symbol
     return None
 
-# Fundamental analysis
 def check_fundamentals(symbol):
     try:
         ticker = yf.Ticker(symbol)
@@ -70,9 +59,8 @@ def check_fundamentals(symbol):
     except:
         return False, None
 
-# Input section
 st.markdown("## 🧠 Enter Analysis Criteria")
-company_input = st.text_input("Enter Company Name (e.g., Infosys, Reliance)")
+company_input = st.text_input("Enter Company Name or Symbol (e.g., Infosys, TCS)")
 timeframe = st.selectbox("Select Timeframe", ["1d", "1wk", "1mo"])
 
 if company_input:
@@ -114,7 +102,6 @@ if company_input:
             else:
                 st.error("❌ Fundamentally weak based on sector criteria.")
 
-            # Technical levels
             last_close = df['Close'].iloc[-1]
             high_6m = df['High'].max()
             low_6m = df['Low'].min()
@@ -142,7 +129,7 @@ if company_input:
             st.dataframe(
                 levels_df.style.set_table_styles([
                     {"selector": "thead th", "props": [("font-size", "14px")]},
-                    {"selector": "td", "props": [("font-size", "13px")]}
+                    {"selector": "td", "props": [("font-size", "13px")]},
                 ]),
                 use_container_width=True
             )
@@ -150,3 +137,4 @@ if company_input:
         except Exception as e:
             st.error("An error occurred during processing.")
             st.exception(e)
+
