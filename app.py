@@ -1,4 +1,3 @@
-
 import yfinance as yf
 import pandas as pd
 import streamlit as st
@@ -17,10 +16,18 @@ with st.sidebar:
     st.markdown("📍 Visakhapatnam, Andhra Pradesh")
     st.markdown("Professional Stock Market Training Institute")
 
-# NSE 500 simulated company map
-company_map = {'RELIANCE': 'Reliance Industries', 'TCS': 'Tata Consultancy Services', 'INFY': 'Infosys Ltd', 'HDFCBANK': 'HDFC Bank', 'ICICIBANK': 'ICICI Bank', 'ITC': 'ITC Ltd', 'SBIN': 'State Bank of India', 'LT': 'Larsen & Toubro', 'AXISBANK': 'Axis Bank', 'SUNPHARMA': 'Sun Pharmaceutical', 'HINDUNILVR': 'Hindustan Unilever', 'BAJFINANCE': 'Bajaj Finance', 'MARUTI': 'Maruti Suzuki', 'ULTRACEMCO': 'UltraTech Cement', 'ASIANPAINT': 'Asian Paints', 'COALINDIA': 'Coal India', 'NTPC': 'NTPC Ltd'}
+# 📌 Paste your full NSE 500 dictionary here
+company_map = {
+    # Example entries (you should paste your full list)
+    "RELIANCE": "RELIANCE INDUSTRIES LTD",
+    "TCS": "TATA CONSULTANCY SERV LT",
+    "INFY": "INFOSYS LIMITED",
+    "HDFCBANK": "HDFC BANK LTD",
+    "SBIN": "STATE BANK OF INDIA"
+    # ... and so on
+}
 
-# Sector-based valuation check
+# Sector-specific ratios
 SECTOR_RATIOS = {
     "Banks": ["priceToBook", "returnOnEquity"],
     "NBFCs": ["priceToBook", "trailingPE"],
@@ -32,6 +39,7 @@ SECTOR_RATIOS = {
     "Retail": ["trailingPE", "enterpriseToRevenue"]
 }
 
+# Resolve symbol from fuzzy match
 def get_symbol_from_name(company_input):
     input_lower = company_input.lower()
     for symbol in company_map:
@@ -44,6 +52,7 @@ def get_symbol_from_name(company_input):
                 return symbol
     return None
 
+# Check fundamentals
 def check_fundamentals(symbol):
     try:
         ticker = yf.Ticker(symbol)
@@ -59,6 +68,7 @@ def check_fundamentals(symbol):
     except:
         return False, None
 
+# UI: Input
 st.markdown("## 🧠 Enter Analysis Criteria")
 company_input = st.text_input("Enter Company Name or Symbol (e.g., Infosys, TCS)")
 timeframe = st.selectbox("Select Timeframe", ["1d", "1wk", "1mo"])
@@ -137,4 +147,3 @@ if company_input:
         except Exception as e:
             st.error("An error occurred during processing.")
             st.exception(e)
-
