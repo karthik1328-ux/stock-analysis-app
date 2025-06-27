@@ -17,7 +17,7 @@ with st.sidebar:
     st.markdown("Professional Stock Market Training Institute")
 
 # 📌 Paste your full NSE 500 dictionary here
-company_map = {
+
     # Example entries (you should paste your full list)
    import pandas as pd
 
